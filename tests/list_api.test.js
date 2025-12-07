@@ -91,6 +91,68 @@ test('test new blog post', async () => {
   assert.strictEqual(finalLength, initialLength + 1, 'blog count should have increased by 1')
 })
 
+test('a blog post can be deleted', async () => {
+  const getResponse = await api
+    .get('/api/blogs')
+    .expect(200)
+
+  const blogs = getResponse.body
+  const blogToDelete = blogs[0]
+  const initialLength = blogs.length
+
+  await api
+    .delete(`/api/blogs/${blogToDelete.id}`)
+    .expect(204)
+
+  const getResponseAfter = await api
+    .get('/api/blogs')
+    .expect(200)
+
+  const finalLength = getResponseAfter.body.length
+  assert.strictEqual(finalLength, initialLength - 1, 'blog count should have decreased by 1')
+
+  const remainingBlogs = getResponseAfter.body
+  assert.strictEqual(remainingBlogs.some((b) => b.id === blogToDelete.id), false, 'deleted blog should not exist')
+})
+
+test('a blog post can be updated', async () => {
+  const getResponse = await api
+    .get('/api/blogs')
+    .expect(200)
+
+  const blogs = getResponse.body
+  const blogToUpdate = blogs[0]
+
+  const updatedBlog = {
+    title: 'title',
+    author: 'author',
+    url: 'https://fullstackopen.com/en/part4/',
+    likes: 67,
+  }
+
+  const updateResponse = await api
+    .put(`/api/blogs/${blogToUpdate.id}`)
+    .send(updatedBlog)
+    .expect(200)
+    .expect('Content-Type', /application\/json/)
+
+  assert.strictEqual(updateResponse.body.title, updatedBlog.title)
+  assert.strictEqual(updateResponse.body.author, updatedBlog.author)
+  assert.strictEqual(updateResponse.body.url, updatedBlog.url)
+  assert.strictEqual(updateResponse.body.likes, updatedBlog.likes)
+
+  const getResponseAfter = await api
+    .get('/api/blogs')
+    .expect(200)
+
+  const updatedBlogFromList = getResponseAfter.body.find((b) => b.id === blogToUpdate.id)
+  assert.strictEqual(updatedBlogFromList.title, updatedBlog.title, 'title was not updated')
+  assert.strictEqual(updatedBlogFromList.author, updatedBlog.author, 'author was not updated')
+  assert.strictEqual(updatedBlogFromList.url, updatedBlog.url, 'url was not updated')
+  assert.strictEqual(updatedBlogFromList.likes, updatedBlog.likes, 'likes was not updated')
+
+})
+
 after(async () => {
   await mongoose.connection.close()
 })
